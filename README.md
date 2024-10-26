@@ -7,7 +7,6 @@ Este repositório possui a implementação do código em prolog para o problema 
 ## Equipe
 
 - **Lucas Eduardo Siqueira dos Santos**
-- **Marcos André Araujo Costa**
 - **Maria Gabriela Moraes de Sá**
 - **Maria Giovanna Gonçalves Sales**
 
