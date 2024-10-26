@@ -1,0 +1,106 @@
+prove(Goal, Hypo, Answer):- 
+    max_proof_length(D), 
+    prove(Goal, Hypo, D, RestD),
+    (RestD >= 0, Answer = yes 
+    ; RestD < 0, Answer = maybe).
+prove(_, _, no).
+
+prove(_, _, D, D):- 
+    D < 0, !.
+prove([], _, D, D):- !.
+prove([G1|Gs], Hypo, D0, D):- 
+    prove(G1, Hypo, D0, D1), 
+    prove(Gs, Hypo, D1, D).
+prove(G, _, D, D):- 
+    prolog_predicate(G), 
+    call(G).
+prove(G, Hypo, D0, D):- 
+    D0 =< 0, !, 
+    D is D0-1 
+    ; 
+    D1 is D0-1, 
+    member(Clause/_, Hypo),
+    copy_term(Clause, [Head|Body]), 
+    G = Head, 
+    prove(Body, Hypo, D1, D).
+
+induce(Hyp):- 
+    iter_deep(Hyp, 0).
+
+iter_deep(Hyp, MaxD):- 
+    write('MaxD= '), write(MaxD), nl,
+    start_hyp(Hyp0), 
+    complete(Hyp0),
+    depth_first(Hyp0, Hyp, MaxD) 
+    ; 
+    NewMaxD is MaxD+1, 
+    iter_deep(Hyp, NewMaxD).
+
+depth_first(Hyp, Hyp, _):- 
+    consistent(Hyp).
+depth_first(Hyp0, Hyp, MaxD0):- 
+    MaxD0 > 0, 
+    MaxD1 is MaxD0-1, 
+    refine_hyp(Hyp0, Hyp1),
+    complete(Hyp1), 
+    depth_first(Hyp1, Hyp, MaxD1).
+
+complete(Hyp):- 
+    not(ex(E), 
+        once(prove(E, Hyp, Answer)), 
+        Answer \== yes).
+
+consistent(Hyp):- 
+    not(nex(E), 
+        once(prove(E, Hyp, Answer)), 
+        Answer \== no).
+
+refine_hyp(Hyp0,Hyp):-
+    conc(Clauses1,[Clause0/Vars0 | Clauses2], Hyp0),
+    conc(Clauses1,[Clause/Vars | Clauses2], Hyp),
+    refine(Clause0, Vars0, Clause, Vars).
+
+refine(Clause, Args, Clause, NewArgs):-
+    conc(Args1, [A | Args2], Args),
+    member(A, Args2),
+    conc(Args1, Args2, NewArgs).
+refine(Clause,Args,NewClause, NewArgs):-
+    length(Clause, L),
+    max_clause_length(MaxL),
+    L < MaxL,
+    backliteral(Lit, Vars),
+    conc(Clause,[Lit],NewClause),
+    conc(Args, Vars, NewArgs).
+
+max_proof_length(10).
+
+max_clause_length(3).
+
+conc([],L,L).
+conc([X|T],L,[X|L1]):-
+    conc(T,L,L1).
+
+%———————————————————————————————————————————————
+
+not(A, B, C):- 
+    A,
+    B,
+    C, !, fail.
+not(_, _, _).
+
+% Experimento para aprender has_daughter
+backliteral(parent(X, Y), [X, Y]).
+backliteral(female(Y), [Y]).
+start_clause([has_daughter(X)] / [X]).
+
+% Exemplos positivos e negativos
+ex(has_daughter(tom, pam)).
+ex(has_daughter(jim, ann)).
+ex(has_daughter(bob, liz)).
+
+nex(has_daughter(tom, ann)).
+nex(has_daughter(jim, bob)).
+nex(has_daughter(bob, tom)).
+
+% Início da indução
+?- induce(Hyp).
